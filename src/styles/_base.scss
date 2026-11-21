@@ -1,3 +1,5 @@
+@use 'mixins' as *;
+
 * { box-sizing: border-box; }
 html, body, #root { min-height: 100%; }
 body {
@@ -28,11 +30,7 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; }
 }
 .eyebrow {
   margin: 0 0 4px;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  @include caps(12px, 0.12em, $color: var(--accent));
 }
 h1 {
   margin: 0;
@@ -41,5 +39,7 @@ h1 {
   font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1.1;
+
+  @include below($bp-phone) { font-size: 28px; }
 }
 .lede { margin: 8px 0 0; color: var(--muted); max-width: 46ch; }

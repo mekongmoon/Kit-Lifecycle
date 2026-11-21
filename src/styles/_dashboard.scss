@@ -1,8 +1,13 @@
 // KPI tiles, pipeline strip, and stage-duration bars.
+@use 'mixins' as *;
+
 .kpis {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 10px;
+
+  @include below($bp-tablet) { grid-template-columns: 1fr 1fr; }
+  @include below($bp-phone) { grid-template-columns: 1fr; }
 }
 .kpi {
   padding: 14px 14px 12px;
@@ -29,11 +34,14 @@
   display: grid;
   grid-template-columns: repeat(9, 1fr);
   gap: 6px;
+
+  @include below($bp-tablet) { grid-template-columns: 1fr 1fr; }
+  @include below($bp-phone) { grid-template-columns: 1fr; }
 }
 .pipe {
   padding: 10px 8px 12px;
   border-radius: 10px;
-  background: #f6f1e7;
+  background: $surface-sunken;
   min-width: 0;
 
   strong {
@@ -63,11 +71,13 @@
   font-size: 13px;
 
   &:last-child { border-bottom: 0; }
+
+  @include below($bp-tablet) { grid-template-columns: 1fr; }
 }
 .bars {
   height: 10px;
-  background: #efe8db;
-  border-radius: 99px;
+  background: $surface-track;
+  border-radius: $radius-pill;
   position: relative;
   overflow: hidden;
 
@@ -75,7 +85,7 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    border-radius: 99px;
+    border-radius: $radius-pill;
   }
   .target { background: #d7cbb6; }
   .median {
@@ -91,7 +101,7 @@
   font-size: 11px;
   background: var(--accent-soft);
   color: var(--accent);
-  border-radius: 99px;
+  border-radius: $radius-pill;
   padding: 2px 8px;
 
   &.toggle {

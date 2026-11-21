@@ -1,5 +1,6 @@
 // Entry point. Partials load in cascade order: later files can override
-// earlier ones, and responsive rules come last.
+// earlier ones. Breakpoints live next to the rules they change, via the
+// below() mixin in _mixins.scss.
 @use 'tokens';
 @use 'base';
 @use 'layout';
@@ -9,4 +10,3 @@
 @use 'order';
 @use 'feedback';
 @use 'trend';
-@use 'responsive';

@@ -1,3 +1,5 @@
+@use 'mixins' as *;
+
 .table-wrap { overflow: auto; max-height: 420px; }
 
 table.data {
@@ -9,12 +11,9 @@ table.data {
     text-align: left;
     position: sticky;
     top: 0;
-    background: #f6f1e7;
+    background: $surface-sunken;
     padding: 8px 10px;
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--muted);
+    @include caps(11px, 0.05em, $weight: null);
   }
   td {
     padding: 8px 10px;
@@ -32,11 +31,11 @@ table.data {
 .badge {
   display: inline-block;
   padding: 1px 7px;
-  border-radius: 99px;
+  border-radius: $radius-pill;
   font-size: 11px;
   font-weight: 600;
 
   &.bad { background: var(--stuck-soft); color: var(--stuck); }
   &.ok { background: var(--good-soft); color: var(--good); }
-  &.neutral { background: #efe8db; color: var(--muted); }
+  &.neutral { background: $surface-track; color: var(--muted); }
 }

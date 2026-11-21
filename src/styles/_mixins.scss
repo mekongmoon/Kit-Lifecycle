@@ -1,0 +1,40 @@
+// Compile-time helpers. Colors that can change at runtime live in
+// _tokens.scss as CSS custom properties; these are fixed layout values.
+
+$bp-tablet: 980px;
+$bp-phone: 640px;
+
+$radius-pill: 99px;
+$surface-sunken: #f6f1e7; // table headers, pipeline tiles
+$surface-track: #efe8db; // bar tracks, neutral badges
+
+/// Styles that apply at or below a breakpoint width.
+@mixin below($width) {
+  @media (max-width: $width) {
+    @content;
+  }
+}
+
+/// Small uppercase label used for headings, field labels, and table headers.
+@mixin caps($size, $tracking, $weight: 600, $color: var(--muted)) {
+  font-size: $size;
+  @if $weight {
+    font-weight: $weight;
+  }
+  letter-spacing: $tracking;
+  text-transform: uppercase;
+  color: $color;
+}
+
+/// White, bordered surface shared by inputs and list buttons.
+@mixin field-surface($radius) {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: $radius;
+}
+
+/// Solid dot with a soft halo, e.g. timeline markers.
+@mixin ring($color, $halo) {
+  background: $color;
+  box-shadow: 0 0 0 3px $halo;
+}
