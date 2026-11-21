@@ -6,7 +6,7 @@ import { LoadBar } from './components/LoadBar';
 import { OrderPanel } from './components/OrderPanel';
 import { PipelineStrip } from './components/PipelineStrip';
 import { StuckPanel } from './components/StuckPanel';
-import { detectKind, parseCsvText } from './lib/csv';
+import { checkUploads, parseCsvText } from './lib/csv';
 import { SAMPLE_AS_OF, toIsoDate } from './lib/dates';
 import { fmtInt } from './lib/format';
 import {
@@ -27,6 +27,7 @@ export default function App() {
   const [sourceLabel, setSourceLabel] = useState('Sample CSVs are bundled with the app.');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [held, setHeld] = useState<{ orders?: RawRow[]; events?: RawRow[] }>({});
 
@@ -55,6 +56,7 @@ export default function App() {
   async function loadSample() {
     setLoading(true);
     setError(null);
+    setWarnings([]);
     try {
       const [ordersText, eventsText] = await Promise.all([
         fetch('./orders.csv').then((r) => {
@@ -88,19 +90,19 @@ export default function App() {
   async function onFiles(files: File[]) {
     if (files.length === 0) return;
     setError(null);
-    const nextHeld = { ...held };
-    for (const file of files) {
-      const parsed = parseCsvText(await file.text());
-      const kind = detectKind(parsed.headers);
-      if (kind === 'unknown') {
-        setError(
-          `${file.name} does not look like orders.csv or kit_events.csv. Expected columns such as product or event_type.`,
-        );
-        return;
-      }
-      if (kind === 'orders') nextHeld.orders = parsed.rows;
-      if (kind === 'events') nextHeld.events = parsed.rows;
+    setWarnings([]);
+    const parsed = await Promise.all(
+      files.map(async (file) => ({ name: file.name, ...parseCsvText(await file.text()) })),
+    );
+    const check = checkUploads(parsed);
+    if (check.errors.length) {
+      setError(check.errors.join(' '));
+      return;
     }
+    setWarnings(check.warnings);
+    const nextHeld = { ...held };
+    if (check.orders) nextHeld.orders = check.orders;
+    if (check.events) nextHeld.events = check.events;
     setHeld(nextHeld);
     if (nextHeld.orders && nextHeld.events) {
       applyPair(nextHeld.orders, nextHeld.events, 'Uploaded CSVs');
@@ -141,6 +143,13 @@ export default function App() {
       />
 
       {error ? <p className="error">{error}</p> : null}
+      {warnings.length ? (
+        <ul className="warn-list">
+          {warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      ) : null}
 
       {dataset && stats ? (
         <>
