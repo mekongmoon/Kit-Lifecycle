@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { DataQualityPanel } from './components/DataQualityPanel';
 import { DurationPanel } from './components/DurationPanel';
 import { FilterBar } from './components/FilterBar';
 import { KpiGrid } from './components/KpiGrid';
@@ -166,17 +167,7 @@ export default function App() {
             <StuckPanel rows={stuck} selectedId={selectedId} onSelect={selectOrder} />
           </div>
           <OrderPanel orders={dataset.orders} selected={selected} onSelect={selectOrder} />
-          <p className="quality">
-            Data cleanup on load: dropped {fmtInt(dataset.quality.duplicateEvents)} duplicate events,{' '}
-            {fmtInt(dataset.quality.orphanEvents)} events with no matching order,{' '}
-            {fmtInt(dataset.quality.eventsSkipped)} unreadable event rows, and{' '}
-            {fmtInt(dataset.quality.ordersSkipped)} unreadable orders.
-            {dataset.quality.unknownEventTypes
-              ? ` Kept ${fmtInt(dataset.quality.unknownEventTypes)} unknown event types on the timeline.`
-              : ''}{' '}
-            Test orders are hidden unless you tick the filter. Upload-only orders are counted but have no kit
-            pipeline. QC-failed kits use a 7-day replacement clock, which is not in the brief.
-          </p>
+          <DataQualityPanel quality={dataset.quality} />
         </>
       ) : (
         <p className="empty section">Load the sample files or drop your own CSVs to open the dashboard.</p>

@@ -1,6 +1,7 @@
 import { daysBetween, inferAsOf, parseTimestamp } from './dates';
 import { EVENT_RANK, furthestEvent, isKitProduct, stageFromEvent } from './pipeline';
 import type {
+  DataIssue,
   DataQuality,
   Dataset,
   HopKey,
@@ -16,51 +17,121 @@ function coerceBool(value: string): boolean {
   return s === 'true' || s === '1' || s === 'yes';
 }
 
-export function parseOrders(rows: RawRow[]): { orders: Order[]; skipped: number; duplicateOrders: number } {
+/** Keep the issue list bounded so a badly broken file can't flood the UI. */
+export const MAX_ISSUES = 200;
+
+const KNOWN_PRODUCTS = new Set(['wgs_30x', 'wgs_100x', 'upload_only']);
+const KNOWN_STATUSES = new Set(['paid', 'refunded', 'cancelled']);
+
+class IssueLog {
+  issues: DataIssue[] = [];
+  total = 0;
+  add(issue: DataIssue) {
+    this.total += 1;
+    if (this.issues.length < MAX_ISSUES) this.issues.push(issue);
+  }
+}
+
+/** Spreadsheet-style line number: header is line 1, first data row is line 2. */
+const lineOf = (index: number) => index + 2;
+
+function missingFields(row: RawRow, fields: string[]): string[] {
+  return fields.filter((f) => !(row[f] ?? '').trim());
+}
+
+export function parseOrders(
+  rows: RawRow[],
+  log = new IssueLog(),
+): { orders: Order[]; skipped: number; duplicateOrders: number } {
   const seen = new Set<string>();
   const orders: Order[] = [];
   let skipped = 0;
   let duplicateOrders = 0;
 
-  for (const row of rows) {
+  rows.forEach((row, index) => {
+    const line = lineOf(index);
     const order_id = (row.order_id ?? '').trim();
-    const created_at = parseTimestamp(row.created_at ?? '');
-    if (!order_id || !created_at) {
+    const rawCreated = (row.created_at ?? '').trim();
+    const created_at = parseTimestamp(rawCreated);
+    if (!order_id) {
       skipped += 1;
-      continue;
+      log.add({ file: 'orders', line, id: '', severity: 'dropped', reason: 'Missing order_id' });
+      return;
+    }
+    if (!created_at) {
+      skipped += 1;
+      log.add({
+        file: 'orders',
+        line,
+        id: order_id,
+        severity: 'dropped',
+        reason: rawCreated ? `Unreadable created_at "${rawCreated}"` : 'Missing created_at',
+      });
+      return;
     }
     if (seen.has(order_id)) {
       duplicateOrders += 1;
-      continue;
+      log.add({ file: 'orders', line, id: order_id, severity: 'dropped', reason: 'Duplicate order_id (kept first)' });
+      return;
     }
     seen.add(order_id);
+    const product = (row.product ?? '').trim();
+    const status = (row.status ?? '').trim().toLowerCase();
+    if (!KNOWN_PRODUCTS.has(product)) {
+      log.add({
+        file: 'orders',
+        line,
+        id: order_id,
+        severity: 'kept',
+        reason: product ? `Unknown product "${product}" (treated as a kit product)` : 'Missing product',
+      });
+    }
+    if (!KNOWN_STATUSES.has(status)) {
+      log.add({
+        file: 'orders',
+        line,
+        id: order_id,
+        severity: 'kept',
+        reason: status ? `Unknown status "${status}" (not flagged for follow-up)` : 'Missing status',
+      });
+    }
     orders.push({
       order_id,
       created_at,
       customer_id: (row.customer_id ?? '').trim(),
-      product: (row.product ?? '').trim(),
+      product,
       country: (row.country ?? '').trim().toUpperCase(),
-      status: (row.status ?? '').trim().toLowerCase(),
+      status,
       is_test: coerceBool(row.is_test ?? ''),
     });
-  }
+  });
 
   return { orders, skipped, duplicateOrders };
 }
 
-export function parseEvents(rows: RawRow[]): { events: KitEvent[]; skipped: number } {
+export function parseEvents(rows: RawRow[], log = new IssueLog()): { events: KitEvent[]; skipped: number } {
   const events: KitEvent[] = [];
   let skipped = 0;
 
-  for (const row of rows) {
+  rows.forEach((row, index) => {
+    const line = lineOf(index);
     const event_id = (row.event_id ?? '').trim();
     const order_id = (row.order_id ?? '').trim();
     const kit_id = (row.kit_id ?? '').trim();
     const event_type = (row.event_type ?? '').trim();
-    const occurred_at = parseTimestamp(row.occurred_at ?? '');
-    if (!event_id || !order_id || !kit_id || !event_type || !occurred_at) {
+    const rawOccurred = (row.occurred_at ?? '').trim();
+    const occurred_at = parseTimestamp(rawOccurred);
+    const missing = missingFields(row, ['event_id', 'order_id', 'kit_id', 'event_type', 'occurred_at']);
+    if (missing.length || !occurred_at) {
       skipped += 1;
-      continue;
+      log.add({
+        file: 'events',
+        line,
+        id: event_id || order_id,
+        severity: 'dropped',
+        reason: missing.length ? `Missing ${missing.join(', ')}` : `Unreadable occurred_at "${rawOccurred}"`,
+      });
+      return;
     }
     events.push({
       event_id,
@@ -69,8 +140,9 @@ export function parseEvents(rows: RawRow[]): { events: KitEvent[]; skipped: numb
       event_type,
       occurred_at,
       source: (row.source ?? '').trim(),
+      line,
     });
-  }
+  });
 
   return { events, skipped };
 }
@@ -210,8 +282,9 @@ function processOrder(order: Order, eventsByKit: Map<string, KitEvent[]>): Proce
 }
 
 export function buildDataset(orderRows: RawRow[], eventRows: RawRow[]): Dataset {
-  const parsedOrders = parseOrders(orderRows);
-  const parsedEvents = parseEvents(eventRows);
+  const log = new IssueLog();
+  const parsedOrders = parseOrders(orderRows, log);
+  const parsedEvents = parseEvents(eventRows, log);
   const deduped = dedupeEvents(parsedEvents.events);
 
   const orderIds = new Set(parsedOrders.orders.map((o) => o.order_id));
@@ -222,9 +295,25 @@ export function buildDataset(orderRows: RawRow[], eventRows: RawRow[]): Dataset 
   for (const event of deduped.events) {
     if (!orderIds.has(event.order_id)) {
       orphanEvents += 1;
+      log.add({
+        file: 'events',
+        line: event.line,
+        id: event.event_id,
+        severity: 'dropped',
+        reason: `No matching order "${event.order_id}"`,
+      });
       continue;
     }
-    if (!(event.event_type in EVENT_RANK)) unknownEventTypes += 1;
+    if (!(event.event_type in EVENT_RANK)) {
+      unknownEventTypes += 1;
+      log.add({
+        file: 'events',
+        line: event.line,
+        id: event.event_id,
+        severity: 'kept',
+        reason: `Unknown event_type "${event.event_type}" (shown on timeline, ignored for stage)`,
+      });
+    }
     knownEvents.push(event);
   }
 
@@ -257,6 +346,8 @@ export function buildDataset(orderRows: RawRow[], eventRows: RawRow[]): Dataset 
     orphanEvents,
     unknownEventTypes,
     duplicateOrders: parsedOrders.duplicateOrders,
+    issues: [...log.issues].sort((a, b) => (a.file === b.file ? a.line - b.line : a.file === 'orders' ? -1 : 1)),
+    issueCount: log.total,
   };
 
   return { orders, quality, asOf, products, countries };
