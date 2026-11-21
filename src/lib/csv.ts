@@ -37,3 +37,68 @@ export function detectKind(headers: string[]): FileKind {
 export async function readFileAsText(file: File): Promise<string> {
   return file.text();
 }
+
+/** Columns the dashboard cannot work without. Optional columns are filled with blanks. */
+export const REQUIRED_COLUMNS: Record<Exclude<FileKind, 'unknown'>, string[]> = {
+  orders: ['order_id', 'created_at', 'product', 'status'],
+  events: ['order_id', 'kit_id', 'event_type', 'occurred_at'],
+};
+
+export function missingColumns(kind: Exclude<FileKind, 'unknown'>, headers: string[]): string[] {
+  const set = new Set(headers.map((h) => h.trim().toLowerCase()));
+  return REQUIRED_COLUMNS[kind].filter((col) => !set.has(col));
+}
+
+export type ParsedUpload = {
+  name: string;
+  rows: RawRow[];
+  headers: string[];
+  errors: string[];
+};
+
+export type UploadCheck = {
+  orders?: RawRow[];
+  events?: RawRow[];
+  /** Blocking problems: nothing from this batch should be applied. */
+  errors: string[];
+  /** Non-blocking problems worth showing next to the data. */
+  warnings: string[];
+};
+
+/** Classify a batch of uploaded files and explain anything that would stop them loading. */
+export function checkUploads(files: ParsedUpload[]): UploadCheck {
+  const out: UploadCheck = { errors: [], warnings: [] };
+  const seen: Partial<Record<Exclude<FileKind, 'unknown'>, string>> = {};
+
+  for (const file of files) {
+    if (file.headers.length === 0) {
+      out.errors.push(`${file.name} is empty or has no header row.`);
+      continue;
+    }
+    const kind = detectKind(file.headers);
+    if (kind === 'unknown') {
+      out.errors.push(
+        `${file.name} does not look like an orders or kit events file. ` +
+          `Found columns: ${file.headers.join(', ')}.`,
+      );
+      continue;
+    }
+    const missing = missingColumns(kind, file.headers);
+    if (missing.length) {
+      out.errors.push(`${file.name} looks like a ${kind} file but is missing: ${missing.join(', ')}.`);
+      continue;
+    }
+    if (seen[kind]) {
+      out.errors.push(
+        `${seen[kind]} and ${file.name} both look like ${kind} files. Upload one orders file and one kit events file.`,
+      );
+      continue;
+    }
+    seen[kind] = file.name;
+    if (file.rows.length === 0) out.warnings.push(`${file.name} has headers but no data rows.`);
+    for (const e of file.errors) out.warnings.push(`${file.name}: ${e}`);
+    out[kind] = file.rows;
+  }
+
+  return out;
+}

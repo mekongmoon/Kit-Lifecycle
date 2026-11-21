@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { stuckKits } from './metrics';
-import { buildDataset } from './process';
+import { buildDataset, MAX_ISSUES } from './process';
 
 function orderRow(overrides: Record<string, string> = {}) {
   return {
@@ -137,5 +137,42 @@ describe('stuckKits', () => {
       [eventRow({ occurred_at: '2026-08-02T00:00:00Z' })],
     );
     expect(stuckKits(data.orders, new Date('2026-10-20T00:00:00Z'))).toHaveLength(0);
+  });
+});
+
+describe('data quality issues', () => {
+  it('lists dropped and kept rows with line numbers', () => {
+    const data = buildDataset(
+      [
+        orderRow(),
+        orderRow({ order_id: 'ord_2', created_at: 'not a date' }),
+        orderRow(),
+        orderRow({ order_id: 'ord_3', product: 'wgs_5x', status: 'pending' }),
+      ],
+      [
+        eventRow(),
+        eventRow({ event_id: 'evt_2', kit_id: '' }),
+        eventRow({ event_id: 'evt_3', order_id: 'ord_missing', kit_id: 'kit_x' }),
+        eventRow({ event_id: 'evt_4', event_type: 'kit_lost', occurred_at: '2026-09-03T00:00:00Z' }),
+      ],
+    );
+    const reasons = data.quality.issues.map((i) => `${i.file}:${i.line}:${i.severity}:${i.reason}`);
+    expect(reasons).toEqual([
+      'orders:3:dropped:Unreadable created_at "not a date"',
+      'orders:4:dropped:Duplicate order_id (kept first)',
+      'orders:5:kept:Unknown product "wgs_5x" (treated as a kit product)',
+      'orders:5:kept:Unknown status "pending" (not flagged for follow-up)',
+      'events:3:dropped:Missing kit_id',
+      'events:4:dropped:No matching order "ord_missing"',
+      'events:5:kept:Unknown event_type "kit_lost" (shown on timeline, ignored for stage)',
+    ]);
+    expect(data.quality.issueCount).toBe(7);
+  });
+
+  it('caps the stored list but keeps the total', () => {
+    const rows = Array.from({ length: MAX_ISSUES + 25 }, (_, i) => orderRow({ order_id: `o${i}`, created_at: 'x' }));
+    const data = buildDataset(rows, []);
+    expect(data.quality.issues).toHaveLength(MAX_ISSUES);
+    expect(data.quality.issueCount).toBe(MAX_ISSUES + 25);
   });
 });

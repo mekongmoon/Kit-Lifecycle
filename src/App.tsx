@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { DataQualityPanel } from './components/DataQualityPanel';
 import { DurationPanel } from './components/DurationPanel';
 import { FilterBar } from './components/FilterBar';
 import { KpiGrid } from './components/KpiGrid';
@@ -6,7 +7,8 @@ import { LoadBar } from './components/LoadBar';
 import { OrderPanel } from './components/OrderPanel';
 import { PipelineStrip } from './components/PipelineStrip';
 import { StuckPanel } from './components/StuckPanel';
-import { detectKind, parseCsvText } from './lib/csv';
+import { TrendPanel } from './components/TrendPanel';
+import { checkUploads, parseCsvText } from './lib/csv';
 import { SAMPLE_AS_OF, toIsoDate } from './lib/dates';
 import { fmtInt } from './lib/format';
 import {
@@ -16,6 +18,7 @@ import {
   overview,
   pipelineCounts,
   stuckKits,
+  weeklyTrends,
 } from './lib/metrics';
 import { buildDataset } from './lib/process';
 import type { Dataset, Filters, RawRow } from './lib/types';
@@ -27,6 +30,7 @@ export default function App() {
   const [sourceLabel, setSourceLabel] = useState('Sample CSVs are bundled with the app.');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [held, setHeld] = useState<{ orders?: RawRow[]; events?: RawRow[] }>({});
 
@@ -47,6 +51,7 @@ export default function App() {
   );
   const pipeline = useMemo(() => pipelineCounts(filtered), [filtered]);
   const hops = useMemo(() => durationStats(filtered), [filtered]);
+  const trends = useMemo(() => weeklyTrends(filtered), [filtered]);
   const selected = useMemo(() => {
     if (!dataset || !selectedId) return null;
     return dataset.orders.find((o) => o.order.order_id === selectedId) ?? null;
@@ -55,6 +60,7 @@ export default function App() {
   async function loadSample() {
     setLoading(true);
     setError(null);
+    setWarnings([]);
     try {
       const [ordersText, eventsText] = await Promise.all([
         fetch('./orders.csv').then((r) => {
@@ -88,19 +94,19 @@ export default function App() {
   async function onFiles(files: File[]) {
     if (files.length === 0) return;
     setError(null);
-    const nextHeld = { ...held };
-    for (const file of files) {
-      const parsed = parseCsvText(await file.text());
-      const kind = detectKind(parsed.headers);
-      if (kind === 'unknown') {
-        setError(
-          `${file.name} does not look like orders.csv or kit_events.csv. Expected columns such as product or event_type.`,
-        );
-        return;
-      }
-      if (kind === 'orders') nextHeld.orders = parsed.rows;
-      if (kind === 'events') nextHeld.events = parsed.rows;
+    setWarnings([]);
+    const parsed = await Promise.all(
+      files.map(async (file) => ({ name: file.name, ...parseCsvText(await file.text()) })),
+    );
+    const check = checkUploads(parsed);
+    if (check.errors.length) {
+      setError(check.errors.join(' '));
+      return;
     }
+    setWarnings(check.warnings);
+    const nextHeld = { ...held };
+    if (check.orders) nextHeld.orders = check.orders;
+    if (check.events) nextHeld.events = check.events;
     setHeld(nextHeld);
     if (nextHeld.orders && nextHeld.events) {
       applyPair(nextHeld.orders, nextHeld.events, 'Uploaded CSVs');
@@ -141,6 +147,13 @@ export default function App() {
       />
 
       {error ? <p className="error">{error}</p> : null}
+      {warnings.length ? (
+        <ul className="warn-list">
+          {warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      ) : null}
 
       {dataset && stats ? (
         <>
@@ -154,20 +167,11 @@ export default function App() {
           <PipelineStrip counts={pipeline} />
           <div className="split section">
             <DurationPanel hops={hops} />
-            <StuckPanel rows={stuck} selectedId={selectedId} onSelect={selectOrder} />
+            <StuckPanel rows={stuck} asOf={asOf} selectedId={selectedId} onSelect={selectOrder} />
           </div>
+          <TrendPanel weeks={trends} />
           <OrderPanel orders={dataset.orders} selected={selected} onSelect={selectOrder} />
-          <p className="quality">
-            Data cleanup on load: dropped {fmtInt(dataset.quality.duplicateEvents)} duplicate events,{' '}
-            {fmtInt(dataset.quality.orphanEvents)} events with no matching order,{' '}
-            {fmtInt(dataset.quality.eventsSkipped)} unreadable event rows, and{' '}
-            {fmtInt(dataset.quality.ordersSkipped)} unreadable orders.
-            {dataset.quality.unknownEventTypes
-              ? ` Kept ${fmtInt(dataset.quality.unknownEventTypes)} unknown event types on the timeline.`
-              : ''}{' '}
-            Test orders are hidden unless you tick the filter. Upload-only orders are counted but have no kit
-            pipeline. QC-failed kits use a 7-day replacement clock, which is not in the brief.
-          </p>
+          <DataQualityPanel quality={dataset.quality} />
         </>
       ) : (
         <p className="empty section">Load the sample files or drop your own CSVs to open the dashboard.</p>

@@ -32,7 +32,7 @@ export function OrderPanel({ orders, selected, onSelect }: Props) {
       <p className="note" style={{ marginTop: 0 }}>
         Searches the full loaded file, including test and cancelled orders.
       </p>
-      <input>
+      <input
         className="search"
         placeholder="Search order_id, kit_id, or customer_id"
         value={query}

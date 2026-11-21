@@ -17,6 +17,8 @@ export type KitEvent = {
   event_type: string;
   occurred_at: Date;
   source: string;
+  /** Line in the source CSV (header = 1). */
+  line: number;
 };
 
 export type StageKey =
@@ -72,6 +74,19 @@ export type DataQuality = {
   orphanEvents: number;
   unknownEventTypes: number;
   duplicateOrders: number;
+  /** First MAX_ISSUES row-level problems, sorted by file and line. */
+  issues: DataIssue[];
+  /** Total issues found, including ones past the cap. */
+  issueCount: number;
+};
+
+export type DataIssue = {
+  file: 'orders' | 'events';
+  line: number;
+  id: string;
+  /** dropped: row not used. kept: row used with a fallback. */
+  severity: 'dropped' | 'kept';
+  reason: string;
 };
 
 export type Dataset = {
