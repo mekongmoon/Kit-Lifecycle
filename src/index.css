@@ -233,6 +233,9 @@ label.field select {
   border-radius: 99px;
   padding: 2px 8px;
 }
+.chip.toggle { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 12px; padding: 3px 10px; cursor: pointer; }
+.chip.toggle:hover { border-color: var(--accent); }
+.chip.toggle.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 .table-wrap { overflow: auto; max-height: 420px; }
 table.data {

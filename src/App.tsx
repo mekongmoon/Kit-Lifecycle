@@ -164,7 +164,7 @@ export default function App() {
           <PipelineStrip counts={pipeline} />
           <div className="split section">
             <DurationPanel hops={hops} />
-            <StuckPanel rows={stuck} selectedId={selectedId} onSelect={selectOrder} />
+            <StuckPanel rows={stuck} asOf={asOf} selectedId={selectedId} onSelect={selectOrder} />
           </div>
           <OrderPanel orders={dataset.orders} selected={selected} onSelect={selectOrder} />
           <DataQualityPanel quality={dataset.quality} />
