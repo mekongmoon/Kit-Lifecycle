@@ -40,28 +40,21 @@ Everything runs in the browser, so there is no backend and the app deploys as a 
 - [x] Order search and per-order timeline
 - [x] Unit and integration tests (Vitest) for parsing, dates, and processing
 - [x] Deployed to Vercel
+- [x] Header validation on upload: missing required columns are named, two files of the same kind are rejected, empty and header-only files are flagged
+- [x] Row-level data-quality panel listing dropped and kept-with-fallback rows by CSV line (capped at 200)
+- [x] Edge-case tests: out-of-order scans, negative durations, QC retests, events after `report_ready` / `kit_replaced`, date-only timestamps, empty inputs, case and whitespace variants
+- [x] Fixes found by those tests: a reported kit stays complete if `kit_replaced` follows it; a finished order shows its completed kit; `event_type` and `product` are case-insensitive
+- [x] Stuck list: stage chips, sort options, and CSV export of the full list
+- [x] Weekly trend of kit orders with reports delivered and median order-to-report time
+- [x] Fixed a JSX typo in `OrderPanel` that broke `tsc` and the production build
 
 ### Next
 
-Priority order. Each item should be small enough to ship on its own.
-
-1. **CSV validation and error messages**
-   - Check for required columns per file and name any that are missing
-   - Report per-row problems (bad timestamps, unknown `event_type`, unknown product/status) in a collapsible data-quality panel instead of silently skipping them
-   - Warn when both uploads look like the same file type
-2. **Edge-case tests**
-   - Out-of-order events (e.g. `sample_received` before `kit_delivered`)
-   - Events after `report_ready`, or after `kit_replaced` on the old kit
-   - Both `qc_passed` and `qc_failed` on one kit
-   - Mixed timezone offsets and date-only timestamps
-   - Empty files, header-only files, very large files
-3. **Stuck-kit workflow**
-   - Export the stuck list to CSV
-   - Sort and group by stage, days overdue, and country
-4. **Trends**
-   - Weekly volume and turnaround over time so ops can see if things are getting better or worse
-5. **Performance**
-   - Move parsing to a Web Worker if real exports are much larger than the sample
+1. **Performance**: move parsing to a Web Worker if real exports are much larger than the 5,000-order sample
+2. **Trend breakdowns**: split the weekly chart by product or country (small multiples, not stacked)
+3. **Configurable targets**: let ops edit the per-stage targets and the QC-failure clock instead of hard-coding them in `src/lib/pipeline.ts`
+4. **Shareable views**: keep filters and the selected order in the URL
+5. **Visual check**: the new panels were checked with tests and a production build, not in a browser; a quick pass on desktop and mobile widths is still needed
 
 ## Open questions
 
