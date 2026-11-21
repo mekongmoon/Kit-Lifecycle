@@ -1,0 +1,8 @@
+@media (max-width: 980px) {
+  .kpis, .pipeline, .split, .meta-grid { grid-template-columns: 1fr 1fr; }
+  .hop { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  h1 { font-size: 28px; }
+  .kpis, .pipeline, .meta-grid, .split { grid-template-columns: 1fr; }
+}

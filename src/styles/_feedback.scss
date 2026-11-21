@@ -1,0 +1,27 @@
+// Notes, errors, upload warnings, and the data-quality panel.
+.note, .error, .empty {
+  font-size: 13px;
+  color: var(--muted);
+}
+.error { color: var(--stuck); }
+.warn-list {
+  margin: 8px 0 0;
+  padding: 8px 12px 8px 28px;
+  font-size: 13px;
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-radius: 8px;
+}
+.quality {
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--muted);
+
+  p { margin: 0; }
+}
+.issues {
+  margin-top: 10px;
+
+  summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+  .table-wrap { margin-top: 8px; max-height: 320px; }
+}

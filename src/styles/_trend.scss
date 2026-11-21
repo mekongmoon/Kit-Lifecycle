@@ -1,0 +1,58 @@
+// Weekly kit-order bar chart.
+.trend {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  height: 160px;
+}
+.trend-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+}
+.trend-plot {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+}
+.trend-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  cursor: default;
+
+  &.on { background: var(--accent-soft); }
+}
+.trend-bar {
+  width: 100%;
+  min-height: 1px;
+  background: var(--accent);
+  border-radius: 4px 4px 0 0;
+}
+.trend-tip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
+.trend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 4px 0 0 28px;
+}
