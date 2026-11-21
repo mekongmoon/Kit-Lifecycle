@@ -7,6 +7,7 @@ import { LoadBar } from './components/LoadBar';
 import { OrderPanel } from './components/OrderPanel';
 import { PipelineStrip } from './components/PipelineStrip';
 import { StuckPanel } from './components/StuckPanel';
+import { TrendPanel } from './components/TrendPanel';
 import { checkUploads, parseCsvText } from './lib/csv';
 import { SAMPLE_AS_OF, toIsoDate } from './lib/dates';
 import { fmtInt } from './lib/format';
@@ -17,6 +18,7 @@ import {
   overview,
   pipelineCounts,
   stuckKits,
+  weeklyTrends,
 } from './lib/metrics';
 import { buildDataset } from './lib/process';
 import type { Dataset, Filters, RawRow } from './lib/types';
@@ -49,6 +51,7 @@ export default function App() {
   );
   const pipeline = useMemo(() => pipelineCounts(filtered), [filtered]);
   const hops = useMemo(() => durationStats(filtered), [filtered]);
+  const trends = useMemo(() => weeklyTrends(filtered), [filtered]);
   const selected = useMemo(() => {
     if (!dataset || !selectedId) return null;
     return dataset.orders.find((o) => o.order.order_id === selectedId) ?? null;
@@ -166,6 +169,7 @@ export default function App() {
             <DurationPanel hops={hops} />
             <StuckPanel rows={stuck} asOf={asOf} selectedId={selectedId} onSelect={selectOrder} />
           </div>
+          <TrendPanel weeks={trends} />
           <OrderPanel orders={dataset.orders} selected={selected} onSelect={selectOrder} />
           <DataQualityPanel quality={dataset.quality} />
         </>

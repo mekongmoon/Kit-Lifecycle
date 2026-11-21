@@ -185,3 +185,62 @@ export function searchOrders(orders: ProcessedOrder[], query: string): Processed
   }
   return hits;
 }
+
+export type WeekTrend = {
+  /** Monday of the ISO week, YYYY-MM-DD (UTC). */
+  week: string;
+  /** Kit orders created this week. */
+  ordersPlaced: number;
+  /** Kit orders whose first report landed this week. */
+  reportsReady: number;
+  /** Median calendar days from order to report, for reports ready this week. */
+  medianDaysToReport: number | null;
+};
+
+export function weekStart(d: Date): string {
+  const day = (d.getUTCDay() + 6) % 7; // Monday = 0
+  const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day));
+  return monday.toISOString().slice(0, 10);
+}
+
+/** Weekly volume and turnaround for kit orders, oldest week first, with empty weeks filled in. */
+export function weeklyTrends(orders: ProcessedOrder[]): WeekTrend[] {
+  const placed = new Map<string, number>();
+  const turnaround = new Map<string, number[]>();
+
+  for (const item of orders) {
+    if (!isKitProduct(item.order.product)) continue;
+    const created = weekStart(item.order.created_at);
+    placed.set(created, (placed.get(created) ?? 0) + 1);
+
+    const reportTimes = item.kits
+      .flatMap((k) => k.events)
+      .filter((e) => e.event_type === 'report_ready')
+      .map((e) => e.occurred_at.getTime());
+    if (reportTimes.length === 0) continue;
+    const reportAt = new Date(Math.min(...reportTimes));
+    const days = daysBetween(item.order.created_at, reportAt);
+    if (days < 0) continue;
+    const week = weekStart(reportAt);
+    const list = turnaround.get(week) ?? [];
+    list.push(days);
+    turnaround.set(week, list);
+  }
+
+  const weeks = [...placed.keys(), ...turnaround.keys()].sort();
+  if (weeks.length === 0) return [];
+
+  const out: WeekTrend[] = [];
+  const end = new Date(`${weeks.at(-1)}T00:00:00Z`).getTime();
+  for (let t = new Date(`${weeks[0]}T00:00:00Z`).getTime(); t <= end; t += 7 * 86_400_000) {
+    const week = new Date(t).toISOString().slice(0, 10);
+    const done = turnaround.get(week) ?? [];
+    out.push({
+      week,
+      ordersPlaced: placed.get(week) ?? 0,
+      reportsReady: done.length,
+      medianDaysToReport: quantile(done, 0.5),
+    });
+  }
+  return out;
+}
