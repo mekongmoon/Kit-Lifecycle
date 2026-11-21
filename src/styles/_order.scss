@@ -1,0 +1,59 @@
+// Order lookup: search, hits, metadata grid, and kit timeline.
+@use 'mixins' as *;
+
+.search {
+  width: 100%;
+  @include field-surface(9px);
+  padding: 9px 12px;
+}
+.hits { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.hit {
+  text-align: left;
+  @include field-surface(8px);
+  padding: 8px 10px;
+  cursor: pointer;
+
+  &:hover, &.active { border-color: var(--accent); background: var(--accent-soft); }
+  small { color: var(--muted); }
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 16px;
+  margin: 12px 0 16px;
+  font-size: 13px;
+
+  b {
+    display: block;
+    @include caps(11px, 0.05em);
+  }
+
+  @include below($bp-tablet) { grid-template-columns: 1fr 1fr; }
+  @include below($bp-phone) { grid-template-columns: 1fr; }
+}
+
+.timeline { display: flex; flex-direction: column; gap: 14px; }
+.kit-block h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.event {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  gap: 10px;
+  align-items: start;
+  font-size: 13px;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  @include ring(var(--accent), var(--accent-soft));
+
+  &.replace { @include ring(var(--stuck), var(--stuck-soft)); }
+  &.done { @include ring(var(--good), var(--good-soft)); }
+}
+.when { color: var(--muted); font-size: 12px; white-space: nowrap; }

@@ -1,0 +1,45 @@
+@use 'mixins' as *;
+
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 400px at 10% -10%, #e7dcc8 0%, transparent 50%),
+    var(--paper);
+  font: 15px/1.5 var(--sans);
+}
+
+button, input, select { font: inherit; color: inherit; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 20px 72px;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 22px;
+}
+.eyebrow {
+  margin: 0 0 4px;
+  @include caps(12px, 0.12em, $color: var(--accent));
+}
+h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+
+  @include below($bp-phone) { font-size: 28px; }
+}
+.lede { margin: 8px 0 0; color: var(--muted); max-width: 46ch; }

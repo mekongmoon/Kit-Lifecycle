@@ -1,0 +1,65 @@
+@use 'mixins' as *;
+
+.btn {
+  @include field-surface(9px);
+  padding: 8px 12px;
+  cursor: pointer;
+
+  &:hover { border-color: var(--accent); }
+
+  &.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+
+    &:hover { filter: brightness(1.08); }
+  }
+}
+
+.file-btn {
+  position: relative;
+  overflow: hidden;
+
+  input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+}
+
+label.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  @include caps(11px, 0.06em);
+
+  input,
+  select {
+    @include field-surface(8px);
+    padding: 7px 10px;
+    min-width: 140px;
+  }
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+
+.drop {
+  border: 1px dashed #cbbfaa;
+  background: #faf7f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--muted);
+
+  &.active { border-color: var(--accent); background: var(--accent-soft); }
+}

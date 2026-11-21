@@ -1,0 +1,41 @@
+@use 'mixins' as *;
+
+.table-wrap { overflow: auto; max-height: 420px; }
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    text-align: left;
+    position: sticky;
+    top: 0;
+    background: $surface-sunken;
+    padding: 8px 10px;
+    @include caps(11px, 0.05em, $weight: null);
+  }
+  td {
+    padding: 8px 10px;
+    border-top: 1px solid var(--line);
+    vertical-align: top;
+  }
+  tr.clickable {
+    cursor: pointer;
+
+    &:hover td { background: #faf6ee; }
+  }
+  tr.selected td { background: var(--accent-soft); }
+}
+
+.badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: $radius-pill;
+  font-size: 11px;
+  font-weight: 600;
+
+  &.bad { background: var(--stuck-soft); color: var(--stuck); }
+  &.ok { background: var(--good-soft); color: var(--good); }
+  &.neutral { background: $surface-track; color: var(--muted); }
+}

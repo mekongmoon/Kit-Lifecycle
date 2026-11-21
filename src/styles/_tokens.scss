@@ -1,0 +1,21 @@
+// Design tokens. Colors stay as CSS custom properties so they can be read
+// or overridden at runtime (e.g. a future dark theme).
+:root {
+  --paper: #f1ece1;
+  --ink: #1b1712;
+  --muted: #6d6558;
+  --line: #ddd4c5;
+  --card: #fffdf8;
+  --accent: #1e4d6b;
+  --accent-soft: #e4eef4;
+  --stuck: #9b2c2c;
+  --stuck-soft: #f8e6e3;
+  --good: #2f6f4e;
+  --good-soft: #e4f0e8;
+  --warn: #9a5b12;
+  --warn-soft: #f7ead4;
+  --shadow: 0 1px 0 rgba(27, 23, 18, 0.04), 0 12px 32px rgba(27, 23, 18, 0.06);
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --serif: "Fraunces", Georgia, serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
