@@ -75,7 +75,7 @@ export function parseOrders(
       return;
     }
     seen.add(order_id);
-    const product = (row.product ?? '').trim();
+    const product = (row.product ?? '').trim().toLowerCase();
     const status = (row.status ?? '').trim().toLowerCase();
     if (!KNOWN_PRODUCTS.has(product)) {
       log.add({
@@ -118,7 +118,7 @@ export function parseEvents(rows: RawRow[], log = new IssueLog()): { events: Kit
     const event_id = (row.event_id ?? '').trim();
     const order_id = (row.order_id ?? '').trim();
     const kit_id = (row.kit_id ?? '').trim();
-    const event_type = (row.event_type ?? '').trim();
+    const event_type = (row.event_type ?? '').trim().toLowerCase();
     const rawOccurred = (row.occurred_at ?? '').trim();
     const occurred_at = parseTimestamp(rawOccurred);
     const missing = missingFields(row, ['event_id', 'order_id', 'kit_id', 'event_type', 'occurred_at']);
@@ -216,9 +216,17 @@ function processKit(order: Order, kitId: string, rawEvents: KitEvent[]): Process
 
   const lastEvent = furthestEvent(events);
   const replaced = events.some((e) => e.event_type === 'kit_replaced');
-  const complete = events.some((e) => e.event_type === 'report_ready');
-  const currentStage = replaced && !complete ? 'replaced' : stageFromEvent(lastEvent?.event_type ?? null);
-  const stageEnteredAt = lastEvent?.occurred_at ?? (currentStage === 'awaiting_shipment' ? order.created_at : null);
+  const report = firstOf(events, 'report_ready');
+  const complete = Boolean(report);
+  // A finished report wins over anything logged afterwards (e.g. a stray kit_replaced).
+  const currentStage = complete
+    ? 'complete'
+    : replaced
+      ? 'replaced'
+      : stageFromEvent(lastEvent?.event_type ?? null);
+  const stageEnteredAt = report
+    ? report.occurred_at
+    : (lastEvent?.occurred_at ?? (currentStage === 'awaiting_shipment' ? order.created_at : null));
 
   return {
     kit_id: kitId,
@@ -243,9 +251,11 @@ function processOrder(order: Order, eventsByKit: Map<string, KitEvent[]>): Proce
     });
 
   const finished = kits.some((k) => k.complete);
+  // Once any kit has a report the order is done, so show that kit rather than a
+  // replacement that may still be in flight.
   const activeKit =
-    kits.find((k) => !k.replaced && !k.complete) ??
     kits.find((k) => k.complete) ??
+    kits.find((k) => !k.replaced) ??
     kits.at(-1) ??
     null;
 
